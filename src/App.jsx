@@ -4,43 +4,59 @@ import "./App.css";
 function App() {
   const [inputsJogados, setInputsJogados] = useState([""]);
   const [inputsResultado, setInputsResultado] = useState([""]);
+  const [numerosJogados, setNumerosJogados] = useState([]);
+  const [numerosResultado, setNumerosResultado] = useState([]);
   const [coincidencias, setCoincidencias] = useState([]);
+  const [linhasAgrupadas, setLinhasAgrupadas] = useState([]);
 
-  // Função para processar string de números
-  const processarString = (texto) => {
-    return texto
-      .split(/[\s,]+/) // Divide por espaço ou vírgula
-      .map((num) => num.trim())
-      .filter((num) => num !== "")
-      .map((num) => parseFloat(num))
-      .filter((num) => !isNaN(num));
-  };
-
-  // Processar todos os inputs de uma seção
-  const processarLista = (inputs) => {
-    return inputs
-      .map((input) => processarString(input))
-      .flat()
-      .filter((num, index, self) => self.indexOf(num) === index); // Remove duplicatas
-  };
-
-  // Encontrar números que coincidem
+  // Processar números jogados
   useEffect(() => {
-    const numerosA = processarLista(inputsJogados);
-    const numerosB = processarLista(inputsResultado);
+    const processarLinha = (texto) => {
+      return texto
+        .split(/[\s,]+/)
+        .map((num) => num.trim())
+        .filter((num) => num !== "")
+        .map((num) => parseFloat(num))
+        .filter((num) => !isNaN(num));
+    };
+
+    const linhas = inputsJogados.map(processarLinha);
+    const todosNumeros = linhas.flat();
+    setNumerosJogados(todosNumeros);
+
+    // Agrupar coincidências por linha (mantendo a estrutura original)
+    if (coincidencias.length > 0) {
+      const agrupadas = linhas.map((linha) =>
+        linha.filter((num) => coincidencias.includes(num))
+      );
+      setLinhasAgrupadas(agrupadas);
+    }
+  }, [inputsJogados, coincidencias]);
+
+  // Processar resultado e encontrar coincidências
+  useEffect(() => {
+    const processarResultado = (inputs) => {
+      return inputs
+        .map((input) =>
+          input
+            .split(/[\s,]+/)
+            .map((num) => num.trim())
+            .filter((num) => num !== "")
+            .map((num) => parseFloat(num))
+            .filter((num) => !isNaN(num))
+        )
+        .flat();
+    };
+
+    const resultadoNumeros = processarResultado(inputsResultado);
+    setNumerosResultado(resultadoNumeros);
 
     // Encontrar números em comum
-    const comuns = numerosA.filter((num) => numerosB.includes(num));
-
-    // Ordenar
-    const unicos = [...new Set(comuns)].sort((a, b) => a - b);
-    setCoincidencias(unicos);
-  }, [inputsJogados, inputsResultado]);
-
-  // Estatísticas
-  const numerosA = processarLista(inputsJogados);
-  const numerosB = processarLista(inputsResultado);
-  const totalCoincidencias = coincidencias.length;
+    const comuns = numerosJogados.filter((num) =>
+      resultadoNumeros.includes(num)
+    );
+    setCoincidencias(comuns);
+  }, [inputsResultado, numerosJogados]);
 
   // Manipular Números Jogados
   const handleJogadosChange = (index, value) => {
@@ -78,16 +94,31 @@ function App() {
     }
   };
 
+  // Limpar todos os campos
+  const limparTudo = () => {
+    setInputsJogados([""]);
+    setInputsResultado([""]);
+  };
+
+  // Estatísticas
+  const totalCoincidencias = coincidencias.length;
+
   return (
     <div className="app">
       <header className="header">
-        <h1>🔍 Comparador de Números</h1>
+        <h1>Lotérica</h1>
         <p>
-          Digite números separados por espaço ou vírgula. Cada linha pode conter
-          múltiplos números.
+          Digite seus números jogados e depois o resultado para ver os acertos.
         </p>
-        <p className="exemplo">Exemplo: "65 86 24 63 96" ou "12,69,02,30,45"</p>
       </header>
+
+      {/* Botão Limpar Tudo no topo */}
+      <div className="top-controls">
+        <button onClick={limparTudo} className="btn-limpar">
+          🗑️ Limpar Tudo
+        </button>
+      </div>
+      <br />
 
       <div className="container">
         {/* Números Jogados */}
@@ -98,6 +129,9 @@ function App() {
               + Adicionar Linha
             </button>
           </div>
+          <p className="instrucao">
+            Digite números separados por espaço ou vírgula
+          </p>
           <div className="inputs-container">
             {inputsJogados.map((input, index) => (
               <div key={index} className="input-group">
@@ -105,9 +139,7 @@ function App() {
                   type="text"
                   value={input}
                   onChange={(e) => handleJogadosChange(index, e.target.value)}
-                  placeholder={`Linha ${
-                    index + 1
-                  }: Digite números separados por espaço ou vírgula`}
+                  placeholder={`Linha ${index + 1}: Ex: 65 86 24 63 96`}
                   className="input-texto"
                 />
                 {inputsJogados.length > 1 && (
@@ -122,7 +154,11 @@ function App() {
               </div>
             ))}
           </div>
-          <div className="contador">Números únicos: {numerosA.length}</div>
+          <div className="contador">
+            {numerosJogados.length} número
+            {numerosJogados.length !== 1 ? "s" : ""} jogado
+            {numerosJogados.length !== 1 ? "s" : ""}
+          </div>
         </div>
 
         {/* Resultado */}
@@ -133,6 +169,9 @@ function App() {
               + Adicionar Linha
             </button>
           </div>
+          <p className="instrucao">
+            Digite os números sorteados (uma ou mais linhas)
+          </p>
           <div className="inputs-container">
             {inputsResultado.map((input, index) => (
               <div key={index} className="input-group">
@@ -140,9 +179,7 @@ function App() {
                   type="text"
                   value={input}
                   onChange={(e) => handleResultadoChange(index, e.target.value)}
-                  placeholder={`Linha ${
-                    index + 1
-                  }: Digite números separados por espaço ou vírgula`}
+                  placeholder={`Linha ${index + 1} do resultado`}
                   className="input-texto"
                 />
                 {inputsResultado.length > 1 && (
@@ -157,42 +194,104 @@ function App() {
               </div>
             ))}
           </div>
-          <div className="contador">Números únicos: {numerosB.length}</div>
+          <div className="contador">
+            {numerosResultado.length} número
+            {numerosResultado.length !== 1 ? "s" : ""} no resultado
+          </div>
         </div>
       </div>
 
-      {/* Resultados */}
+      {/* Visualização dos Números Jogados com Destaque */}
       <div className="resultados">
         <h2>
-          Acertos: {totalCoincidencias} número
-          {totalCoincidencias !== 1 ? "s" : ""}
+          Acertos: {totalCoincidencias} de {numerosJogados.length} número
+          {numerosJogados.length !== 1 ? "s" : ""} jogado
+          {numerosJogados.length !== 1 ? "s" : ""}
+          {totalCoincidencias > 0 && (
+            <span className="taxa-acerto">
+              (
+              {numerosJogados.length > 0
+                ? ((totalCoincidencias / numerosJogados.length) * 100).toFixed(
+                    1
+                  )
+                : "0"}
+              %)
+            </span>
+          )}
         </h2>
 
-        {totalCoincidencias > 0 ? (
-          <div className="coincidencias-lista">
-            {coincidencias.map((num, idx) => (
-              <div key={idx} className="coincidencia-item">
-                <span className="indice">Acerto #{idx + 1}</span>
-                <span className="numero">{num}</span>
-              </div>
-            ))}
+        {numerosJogados.length > 0 ? (
+          <div className="visualizacao-jogados">
+            <h3>Seus números jogados (acertos em destaque):</h3>
+
+            {/* Exibir acertos mantendo a estrutura das linhas */}
+            <div className="linhas-acertos">
+              {inputsJogados.map((input, linhaIndex) => {
+                const numerosNaLinha = input
+                  .split(/[\s,]+/)
+                  .map((num) => num.trim())
+                  .filter((num) => num !== "")
+                  .map((num) => parseFloat(num))
+                  .filter((num) => !isNaN(num));
+
+                if (numerosNaLinha.length === 0) return null;
+
+                return (
+                  <div key={linhaIndex} className="linha-container">
+                    <div className="linha-header">
+                      <span className="linha-numero">
+                        Linha {linhaIndex + 1}
+                      </span>
+                      <span className="linha-stats">
+                        {linhasAgrupadas[linhaIndex]?.length || 0} acerto
+                        {(linhasAgrupadas[linhaIndex]?.length || 0) !== 1
+                          ? "s"
+                          : ""}
+                      </span>
+                    </div>
+                    <div className="numeros-linha">
+                      {numerosNaLinha.map((num, numIndex) => {
+                        const isAcerto = coincidencias.includes(num);
+                        return (
+                          <div
+                            key={`${linhaIndex}-${numIndex}`}
+                            className={`numero-item ${
+                              isAcerto ? "acerto" : "normal"
+                            }`}
+                          >
+                            <span className="numero">{num}</span>
+                            {isAcerto && (
+                              <span className="badge-acerto">✓</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
           </div>
         ) : (
-          <div className="sem-coincidencias">Nenhum acerto encontrado</div>
+          <div className="sem-numeros">Digite seus números jogados acima</div>
         )}
 
-        {/* Resumo */}
+        {/* Resumo Estatístico */}
         <div className="resumo">
           <div className="resumo-item">
-            <span>Números Jogados</span>
-            <strong>{numerosA.length}</strong>
+            <span>Linhas Jogadas</span>
+            <strong>{inputsJogados.length}</strong>
           </div>
           <div className="resumo-item">
-            <span>Números Resultado</span>
-            <strong>{numerosB.length}</strong>
+            <span>Números Jogados</span>
+            <strong>{numerosJogados.length}</strong>
+          </div>
+          <div className="resumo-item">
+            <span>Números no Resultado</span>
+            <strong>{numerosResultado.length}</strong>
           </div>
           <div className="resumo-item destaque">
-            <span>Acertos</span>
+            <span>Total de Acertos</span>
             <strong>{totalCoincidencias}</strong>
           </div>
         </div>
